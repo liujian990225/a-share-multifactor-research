@@ -17,7 +17,7 @@
 
 ## 1. 项目定位
 
-本项目不是简单的“买入若干股票并画净值曲线”，而是一个完整的量化研究框架，目标是回答：
+入门学习项目，目标是回答：
 
 1. 哪些股票特征，即因子，对未来收益具有解释力？
 2. 单因子是否有效，是否稳定？
@@ -26,15 +26,6 @@
 5. 策略在牛市、熊市、震荡市中是否稳定？
 6. 策略是否存在样本小、行业缺失、过拟合等局限？
 
-本项目适合用于：
-
-- 量化研究实习项目展示；
-- Python 金融数据分析练习；
-- 多因子选股策略研究；
-- 机器学习 Alpha 框架学习；
-- GitHub 简历项目展示。
-
----
 
 ## 2. 核心研究框架
 
@@ -446,99 +437,6 @@ reports/baostock_run/
     ├── nav_score_ml_alpha.png
     ├── nav_score_ic_forecast.png
     └── ...
-```
-
-默认情况下，`data/` 和 `reports/` 不建议上传 GitHub。可将核心结论整理到：
-
-```text
-docs/baostock_result_analysis.md
-```
-
----
-
-## 13. 项目结构
-
-```text
-a_share_multifactor_backtest/
-├── configs/
-│   ├── config_baostock.yaml
-│   ├── config_level3_demo.yaml
-│   ├── config_tushare.yaml
-│   └── ...
-├── docs/
-│   ├── baostock_usage.md
-│   ├── level3_research_upgrade.md
-│   ├── baostock_result_analysis.md
-│   └── ...
-├── scripts/
-│   ├── fetch_baostock_data.py
-│   ├── run_baostock_backtest.py
-│   ├── fetch_tushare_data.py
-│   └── ...
-├── src/
-│   └── mf_strategy/
-│       ├── data_loader.py
-│       ├── factor_engine.py
-│       ├── factor_preprocess.py
-│       ├── factor_test.py
-│       ├── ml_alpha.py
-│       ├── portfolio.py
-│       ├── backtest.py
-│       ├── performance.py
-│       ├── market_regime.py
-│       ├── visualization.py
-│       ├── report.py
-│       └── cli.py
-├── tests/
-├── requirements.txt
-├── pyproject.toml
-├── README.md
-└── .gitignore
-```
-
----
-
-## 14. GitHub 上传建议
-
-建议上传：
-
-```text
-README.md
-configs/
-docs/
-scripts/
-src/
-tests/
-requirements.txt
-pyproject.toml
-.gitignore
-```
-
-不建议上传：
-
-```text
-data/
-reports/
-.venv/
-*.csv
-*.pkl
-*.parquet
-```
-
----
-
-## 15. 简历写法
-
-```text
-A 股多因子选股与机器学习 Alpha 回测框架 | Python, BaoStock, Pandas, scikit-learn
-
-- 基于 BaoStock 免费 A 股数据构建多因子选股研究框架，覆盖数据下载、缓存、因子构造、因子预处理、IC 检验、组合构建、回测评估与报告生成。
-- 构建价值、动量、低波动和流动性因子，并使用 IC、Rank IC、ICIR、分层回测评估因子有效性。
-- 对比等权多因子、滚动 IC 加权、机器学习 Alpha 和因子 IC 预测择时策略，分析不同市场状态下的收益、回撤和超额表现。
-- 采用 walk-forward 训练框架避免未来函数，并输出样本外 Rank IC、特征重要性、策略净值、最大回撤、夏普比率和信息比率等指标。
-```
-
----
 
 ## 16. 研究声明
 
