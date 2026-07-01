@@ -1,0 +1,93 @@
+project:
+  name: a_share_multifactor_tushare
+  random_seed: 42
+
+data:
+  # 回测仍然读取标准 CSV；先运行 scripts/fetch_tushare_data.py 自动生成这些 CSV。
+  source: csv
+  csv:
+    prices_path: data/raw/tushare/prices.csv
+    fundamentals_path: data/raw/tushare/fundamentals.csv
+    benchmark_path: data/raw/tushare/benchmark.csv
+    membership_path: data/raw/tushare/membership.csv
+
+  tushare:
+    # 不要把 token 写进 GitHub。推荐在本地设置环境变量 TUSHARE_TOKEN。
+    token_env: TUSHARE_TOKEN
+    cache_dir: data/raw/tushare
+    start_date: "2017-01-01"
+    end_date: "2024-12-31"
+    benchmark_index: "000300.SH"
+    adj: qfq
+    use_pro_bar: true
+    request_pause: 0.35
+    retries: 3
+    use_cache: true
+    quality_lag_days: 90
+    universe:
+      # 推荐 index_weight：按沪深300历史成分股取数；如果你的积分权限不足，脚本会自动 fallback。
+      mode: index_weight
+      index_code: "000300.SH"
+      max_symbols: null
+      fallback_max_symbols: 80
+      # 也可以改成 custom：
+      # mode: custom
+      # symbols: ["600519.SH", "000001.SZ", "300750.SZ"]
+
+backtest:
+  start_date: "2018-01-01"
+  end_date: "2024-12-31"
+  rebalance_freq: M
+  execution_lag: 1
+  top_n: 30
+  top_pct: null
+  transaction_cost_bps: 10
+  benchmark_name: CSI300
+  industry_neutral_selection: true
+  min_listed_days: 180
+  min_avg_amount: 20000000
+
+factor:
+  neutralize: true
+  neutralize_size: true
+  winsorize_method: mad
+  mad_n: 3.0
+  ic_lookback: 12
+  min_ic_obs: 6
+  quantiles: 5
+  category_weights:
+    value: 0.25
+    quality: 0.25
+    momentum: 0.20
+    low_volatility: 0.15
+    liquidity: 0.15
+
+analysis:
+  sensitivity:
+    top_n_list: [20, 30, 50]
+    cost_bps_list: [5, 10, 20]
+  regime:
+    lookback_days: 120
+    bull_threshold: 0.10
+    bear_threshold: -0.10
+
+ml:
+  # Level 3 module. True = run walk-forward ML alpha and factor IC forecast timing.
+  # For first local smoke test, you may set enabled: false to reduce runtime.
+  enabled: true
+  model_type: random_forest      # random_forest | gradient_boosting | xgboost
+  n_estimators: 100
+  max_depth: 3
+  train_window_months: 36
+  min_train_months: 18
+  validation_months: 6
+  rank_target: true
+  factor_ic_forecast: true
+  ic_model_type: random_forest
+  ic_feature_lookback: 12
+  ic_min_train_rows: 80
+
+reports:
+  output_dir: reports/tushare_run
+  save_figures: true
+  save_csv: true

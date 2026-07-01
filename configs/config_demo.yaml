@@ -1,0 +1,70 @@
+project:
+  name: a_share_multifactor_demo
+  random_seed: 42
+
+data:
+  source: demo
+  demo:
+    start_date: "2017-01-01"
+    end_date: "2024-12-31"
+    n_symbols: 180
+    n_industries: 9
+  csv:
+    prices_path: data/raw/prices.csv
+    fundamentals_path: data/raw/fundamentals.csv
+    benchmark_path: data/raw/benchmark.csv
+    membership_path: null
+
+backtest:
+  start_date: "2018-01-01"
+  end_date: "2024-12-31"
+  rebalance_freq: M
+  execution_lag: 1
+  top_n: 30
+  top_pct: null
+  transaction_cost_bps: 10
+  benchmark_name: CSI300_DEMO
+  industry_neutral_selection: true
+  min_listed_days: 180
+  min_avg_amount: 10000000
+
+factor:
+  neutralize: true
+  neutralize_size: true
+  winsorize_method: mad
+  mad_n: 3.0
+  ic_lookback: 12
+  min_ic_obs: 6
+  quantiles: 5
+  category_weights:
+    value: 0.25
+    quality: 0.25
+    momentum: 0.20
+    low_volatility: 0.15
+    liquidity: 0.15
+
+analysis:
+  sensitivity:
+    top_n_list: [20, 30, 50]
+    cost_bps_list: [5, 10, 20]
+  regime:
+    lookback_days: 120
+    bull_threshold: 0.10
+    bear_threshold: -0.10
+
+reports:
+  output_dir: reports/demo_run
+  save_figures: true
+  save_csv: true
+
+ml:
+  enabled: false
+  model_type: random_forest
+  n_estimators: 100
+  max_depth: 3
+  train_window_months: 24
+  min_train_months: 12
+  validation_months: 4
+  rank_target: true
+  factor_ic_forecast: true
+

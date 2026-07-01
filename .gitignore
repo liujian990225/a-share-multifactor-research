@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual env
+.venv/
+venv/
+.env
+
+# Secrets
+*.token
+.env.local
+
+# Data and reports
+/data/raw/**/*.csv
+/data/raw/**/*.pkl
+/data/raw/**/*.parquet
+/data/raw/tushare/raw_by_symbol/
+/data/processed/**/*.csv
+/reports/*
+!/reports/.gitkeep
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+.venv/
+__pycache__/
+*.pyc
+.env
+data/
+reports/
+*.csv
+*.parquet
+*.pkl
+.DS_Store
