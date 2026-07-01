@@ -1,141 +1,487 @@
-# A 股多因子选股策略研究与回测系统
+# A 股多因子选股与机器学习 Alpha 回测框架
 
-这是一个适合写进简历和 GitHub 的「第三阶段亮点版」量化项目，覆盖从数据读取、因子构建、因子检验、多因子合成、组合构建、回测评估、行业/风格暴露分析、市场环境分阶段分析到可视化报告的完整流程。
+> 一个面向量化研究实习面试的 A 股多因子研究项目。  
+> 项目覆盖 **数据获取、因子构建、因子预处理、因子有效性检验、多因子合成、机器学习 Alpha、组合回测、市场状态分析、参数敏感性分析和研究报告输出** 的完整流程。
 
-> 项目默认使用自动生成的 demo 数据跑通全流程；当前版本已接入 Tushare 下载脚本，可直接拉取真实 A 股数据并转换为标准 CSV 后运行回测。
+本项目当前支持三种数据模式：
 
-## 项目亮点
+| 数据模式 | 说明 | 适合场景 |
+|---|---|---|
+| Demo | 自动生成模拟数据 | 快速验证项目流程 |
+| BaoStock | 免费 A 股真实行情与估值数据 | 无需 Token，适合本地真实数据回测 |
+| Tushare | Tushare Pro 数据接口 | 有完整接口权限时使用 |
 
-- **完整多因子框架**：价值、质量、动量、低波动、流动性五大类因子。
-- **标准因子工程**：缺失值填充、MAD 去极值、Z-score 标准化、行业与市值中性化。
-- **因子有效性检验**：Pearson IC、Spearman Rank IC、ICIR、IC 胜率、分层回测、因子相关性。
-- **多因子合成对比**：等权合成 vs 滚动 Rank IC 加权合成。
-- **更真实的回测设定**：月度调仓、Top N 组合、行业中性选股、交易成本、换手率统计。
-- **进阶归因分析**：牛市/熊市/震荡市表现、行业暴露、风格暴露、参数敏感性分析。
-- **可视化报告**：净值曲线、回撤曲线、月度收益热力图、IC 时序图、分层收益图、因子相关性热力图。
-- **Tushare 真实数据接入**：支持自动下载行情、估值、财务指标、指数基准和指数成分，并缓存为标准 CSV。
+当前推荐使用 **BaoStock 免费数据源** 跑通真实数据版本。
 
-## 快速开始
+---
+
+## 1. 项目定位
+
+本项目不是简单的“买入若干股票并画净值曲线”，而是一个完整的量化研究框架，目标是回答：
+
+1. 哪些股票特征，即因子，对未来收益具有解释力？
+2. 单因子是否有效，是否稳定？
+3. 多因子等权合成、滚动 IC 加权、机器学习 Alpha、因子择时之间表现有何差异？
+4. 策略收益来自市场上涨、因子暴露，还是选股能力？
+5. 策略在牛市、熊市、震荡市中是否稳定？
+6. 策略是否存在样本小、行业缺失、过拟合等局限？
+
+本项目适合用于：
+
+- 量化研究实习项目展示；
+- Python 金融数据分析练习；
+- 多因子选股策略研究；
+- 机器学习 Alpha 框架学习；
+- GitHub 简历项目展示。
+
+---
+
+## 2. 核心研究框架
+
+项目整体流程如下：
+
+```text
+数据获取
+  ↓
+数据清洗与标准化
+  ↓
+因子构造
+  ↓
+因子预处理
+  ↓
+IC / Rank IC / 分层回测
+  ↓
+多因子合成
+  ↓
+组合构建
+  ↓
+回测与绩效评估
+  ↓
+市场状态分析 / 参数敏感性分析
+  ↓
+报告输出
+```
+
+---
+
+## 3. 因子体系
+
+当前 BaoStock 真实数据版本主要使用行情、估值和量价数据，因此实际参与的因子包括：
+
+### 3.1 价值因子
+
+| 因子 | 含义 | 方向 |
+|---|---|---|
+| `value_ep` | 盈利收益率，约等于 `1 / PE` | 越高越好 |
+| `value_bp` | 账面市值比，约等于 `1 / PB` | 越高越好 |
+| `value_sp` | 销售市值比，约等于 `1 / PS` | 越高越好 |
+
+价值因子的核心思想是：估值越低的股票，未来可能获得更高风险补偿或估值修复收益。
+
+### 3.2 动量因子
+
+| 因子 | 含义 | 方向 |
+|---|---|---|
+| `momentum_20d` | 过去 20 日收益率 | 默认越高越好 |
+| `momentum_60d` | 过去 60 日收益率 | 默认越高越好 |
+| `momentum_120d` | 过去 120 日收益率 | 默认越高越好 |
+
+动量因子用于刻画价格趋势。但在 A 股市场中，短中期动量有时会呈现反转特征，因此需要通过 IC 检验判断方向。
+
+### 3.3 低波动因子
+
+| 因子 | 含义 | 方向 |
+|---|---|---|
+| `low_vol_20d` | 过去 20 日低波动特征 | 越高越好 |
+| `low_vol_60d` | 过去 60 日低波动特征 | 越高越好 |
+
+低波动因子用于刻画股票风险特征。低波动股票通常在弱市或震荡市中表现更稳健。
+
+### 3.4 流动性因子
+
+| 因子 | 含义 | 方向 |
+|---|---|---|
+| `liquidity_log_amount` | 成交额对数 | 需要实证检验 |
+| `liquidity_low_amihud` | Amihud 非流动性指标的反向处理 | 越高越好 |
+
+流动性因子既可以作为收益预测因子，也可以作为风险过滤因子。当前样本中，流动性因子的方向需要谨慎解释。
+
+### 3.5 质量因子说明
+
+项目代码中保留质量因子接口，例如 ROE、ROA、毛利率、净利率、资产负债率等。但 BaoStock 免费日频数据无法完整提供这些高质量财务字段，因此当前 BaoStock 实验中质量因子主要作为占位，不作为核心结论依据。
+
+后续如果接入 Tushare 高权限、聚宽、Wind、RiceQuant 或其他完整财务数据源，可以恢复完整的：
+
+```text
+价值 + 质量 + 动量 + 低波动 + 流动性
+```
+
+五类因子体系。
+
+---
+
+## 4. 因子预处理方法
+
+原始因子不能直接用于选股，需要经过标准化处理。
+
+### 4.1 缺失值处理
+
+对缺失值进行填充或剔除，避免因子矩阵中出现大量 NaN 导致回测失败。
+
+### 4.2 MAD 去极值
+
+使用 MAD 方法处理极端值，减少异常样本对截面排序和模型训练的影响。
+
+```text
+因子值限制在 median ± n × MAD 范围内
+```
+
+### 4.3 Z-score 标准化
+
+不同因子的量纲不同，例如成交额可能是几亿元，收益率可能是小数。标准化后，不同因子可以放在同一尺度上进行合成。
+
+```text
+z = (x - mean) / std
+```
+
+### 4.4 方向统一
+
+统一为：
+
+```text
+因子值越大，预期越好
+```
+
+例如：
+
+- 低 PE 转换为 `EP = 1 / PE`；
+- 低 PB 转换为 `BP = 1 / PB`；
+- 低波动转换为负波动或反向因子。
+
+---
+
+## 5. 因子有效性检验
+
+项目使用以下方法评估单因子是否有效。
+
+### 5.1 IC
+
+IC 衡量当前因子值与下一期收益率之间的相关性。
+
+```text
+IC = corr(factor_t, return_{t+1})
+```
+
+### 5.2 Rank IC
+
+Rank IC 衡量因子排名与未来收益排名之间的相关性，通常比 Pearson IC 更稳健。
+
+### 5.3 ICIR
+
+ICIR 衡量因子预测能力的稳定性。
+
+```text
+ICIR = IC均值 / IC标准差
+```
+
+### 5.4 分层回测
+
+每期按因子值排序，将股票分为若干组，观察高分组是否持续跑赢低分组。
+
+---
+
+## 6. 策略模型
+
+项目当前比较四类策略。
+
+| 策略名称 | 代码字段 | 方法说明 |
+|---|---|---|
+| 等权多因子 | `score_equal` | 所有标准化因子等权合成 |
+| 滚动 IC 加权 | `score_ic_weighted` | 根据历史 Rank IC 动态调整因子权重 |
+| 机器学习 Alpha | `score_ml_alpha` | 使用 Random Forest / Gradient Boosting / XGBoost 预测未来收益 |
+| 因子 IC 预测择时 | `score_ic_forecast` | 预测下一期因子有效性并动态分配因子权重 |
+
+### 6.1 等权多因子
+
+简单、稳健、可解释，是最基础的多因子基准模型。
+
+### 6.2 滚动 IC 加权
+
+使用过去一段时间的因子 Rank IC 作为权重依据。历史上更有效的因子获得更高权重。
+
+### 6.3 机器学习 Alpha
+
+使用 walk-forward 训练方式：
+
+```text
+历史因子样本 → 训练模型 → 当前截面预测 Alpha → 选股回测
+```
+
+该方法严格避免使用未来信息。
+
+### 6.4 因子 IC 预测择时
+
+预测未来哪些因子更可能有效，并据此调整因子权重。该方法体现因子有效性的时变特征。
+
+---
+
+## 7. 回测设定
+
+当前 BaoStock 示例回测设定如下：
+
+| 项目 | 设置 |
+|---|---|
+| 数据源 | BaoStock |
+| 市场 | A 股 |
+| 回测区间 | 2021-01-01 至 2024-12-31 |
+| 调仓频率 | 月度调仓 |
+| 股票池规模 | 示例中约 50 只 |
+| 持仓数量 | Top 20 |
+| 交易成本 | 单边 10 bps |
+| 策略类型 | Long-only 多头组合 |
+| 基准 | 沪深 300 指数 |
+| 机器学习 | Random Forest / walk-forward |
+
+---
+
+## 8. BaoStock 样本结果分析
+
+> 注意：以下结果来自本地 BaoStock 免费数据源小样本回测，主要用于展示研究流程和方法，不代表实盘收益承诺。当前样本股票数量较少，且行业与完整财务数据不充分，因此结果需要谨慎解释。
+
+### 8.1 策略表现
+
+当前样本中，四类策略表现如下：
+
+| 策略 | 年化收益 | 基准年化 | 年化超额 | 夏普 | 最大回撤 | 信息比率 | 最终净值 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 等权多因子 | 6.25% | -1.11% | 7.36% | 0.314 | -25.44% | 0.391 | 1.339 |
+| 滚动 IC 加权 | 11.83% | -1.11% | 12.95% | 0.615 | -21.09% | 0.706 | 1.712 |
+| 机器学习 Alpha | 10.82% | -1.11% | 11.93% | 0.546 | -24.91% | 0.636 | 1.639 |
+| IC 预测择时 | 12.95% | -1.11% | 14.06% | 0.672 | -21.33% | 0.762 | 1.796 |
+
+核心结论：
+
+1. `score_ic_forecast` 表现最好；
+2. `score_ic_weighted` 明显优于简单等权；
+3. 机器学习 Alpha 优于等权，但未超过 IC 预测择时；
+4. 当前样本中，动态因子权重优于静态等权合成。
+
+### 8.2 因子表现
+
+当前样本中表现最稳定的是低波动因子。
+
+| 因子 | Rank IC 均值 | ICIR | 胜率 |
+|---|---:|---:|---:|
+| `low_vol_60d` | 0.1545 | 0.631 | 76.60% |
+| `low_vol_20d` | 0.1487 | 0.610 | 78.72% |
+| `value_bp` | 0.0809 | 0.296 | 65.96% |
+| `value_ep` | 0.0621 | 0.253 | 55.32% |
+| `value_sp` | 0.0390 | 0.212 | 57.45% |
+
+解释：
+
+- 低波动因子在当前样本中表现最稳定；
+- 价值因子有一定正向效果；
+- 当前样本更偏防御风格。
+
+### 8.3 动量因子表现为负
+
+| 因子 | Rank IC 均值 | ICIR | 胜率 |
+|---|---:|---:|---:|
+| `momentum_20d` | -0.0824 | -0.308 | 42.55% |
+| `momentum_60d` | -0.1136 | -0.468 | 25.53% |
+| `momentum_120d` | -0.1380 | -0.615 | 29.79% |
+
+说明当前样本中简单动量并未表现出趋势延续，反而更接近短中期反转。后续可以考虑加入反转因子，或在不同市场状态下动态决定动量方向。
+
+### 8.4 市场状态分析
+
+当前结果显示：
+
+- 熊市阶段，策略明显跑赢基准，体现防御属性；
+- 震荡市阶段，滚动 IC 加权和 IC 预测择时表现较好；
+- 牛市阶段，策略跑输基准，说明当前因子体系进攻性不足。
+
+这说明当前策略更像防御型多因子策略，适合弱市和震荡市，但在强牛市中弹性不足。
+
+---
+
+## 9. 当前结果局限
+
+当前结果具有展示价值，但仍存在明显局限：
+
+1. 股票池较小。示例中股票池约 50 只，Top 20 持仓导致选股区分度不足；
+2. 行业信息不足。BaoStock 数据中行业字段较弱，行业中性化和行业暴露分析没有完全发挥作用；
+3. 质量因子缺少完整真实财务数据；
+4. 机器学习样本较少，模型结果需要在更大股票池上复验；
+5. 免费数据源无法完全替代专业机构数据源；
+6. 当前结果不代表实盘收益。
+
+---
+
+## 10. 后续改进方向
+
+后续可以从以下方向提升项目质量：
+
+### 10.1 扩大股票池
+
+将 `max_symbols` 从 50 提高到 100、300 或更多。
+
+```yaml
+data:
+  baostock:
+    start_date: "2018-01-01"
+    end_date: "2024-12-31"
+    max_symbols: 300
+```
+
+### 10.2 优化 Top N
+
+若股票池为 50 只，Top N 建议设为 5 或 10。  
+若股票池扩大到 300 只，Top N 可设为 30。
+
+### 10.3 补充行业分类
+
+使用 AKShare 或其他数据源补充申万行业、东方财富行业或中信行业分类，从而实现真正的行业暴露分析和行业中性化。
+
+### 10.4 补充质量因子
+
+接入完整财务数据后，可加入：
+
+- ROE；
+- ROA；
+- 毛利率；
+- 净利率；
+- 资产负债率；
+- 经营现金流；
+- 营收增长率；
+- 净利润增长率。
+
+### 10.5 加入反转和成长因子
+
+由于当前动量因子表现为负，可以加入短期反转因子。  
+为提升牛市弹性，可以加入成长因子和盈利修复因子。
+
+### 10.6 更严格的样本外验证
+
+扩大股票池和时间区间后，进一步进行样本内、验证集、测试集划分，并检查 walk-forward 样本外 Rank IC。
+
+---
+
+## 11. 快速开始
+
+### 11.1 创建环境
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+macOS / Linux：
 
 ```bash
-# 1. 创建环境，Python 3.10+ 推荐
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate
+```
 
-# 2. 安装依赖
+### 11.2 安装依赖
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 pip install -e .
-
-# 3. 运行 demo 全流程
-python -m mf_strategy.cli --config configs/config_demo.yaml
 ```
 
-运行完成后，结果会保存到：
+### 11.3 运行 Demo
+
+```bash
+python -m mf_strategy.cli --config configs/config_level3_demo.yaml
+```
+
+### 11.4 下载 BaoStock 数据
+
+```bash
+python scripts/fetch_baostock_data.py --config configs/config_baostock.yaml
+```
+
+### 11.5 运行 BaoStock 回测
+
+```bash
+python scripts/run_baostock_backtest.py
+```
+
+或：
+
+```bash
+python -m mf_strategy.cli --config configs/config_baostock.yaml
+```
+
+---
+
+## 12. 输出文件
+
+BaoStock 回测结果默认输出到：
 
 ```text
-reports/demo_run/
+reports/baostock_run/
+```
+
+主要文件包括：
+
+```text
+reports/baostock_run/
+├── report.md
 ├── data/
-│   ├── factor_panel.csv
-│   ├── ic_summary.csv
 │   ├── performance_summary.csv
+│   ├── ic_summary.csv
+│   ├── ml_diagnostics.csv
+│   ├── ml_feature_importance.csv
+│   ├── factor_timing_weights.csv
 │   ├── regime_summary.csv
 │   ├── sensitivity_summary.csv
-│   └── ...
-├── figures/
-│   ├── nav_score_equal.png
-│   ├── nav_score_ic_weighted.png
-│   ├── drawdown_score_equal.png
-│   ├── monthly_heatmap_score_ic_weighted.png
-│   └── ...
-└── report.md
+│   └── yearly_returns.csv
+└── figures/
+    ├── nav_score_equal.png
+    ├── nav_score_ic_weighted.png
+    ├── nav_score_ml_alpha.png
+    ├── nav_score_ic_forecast.png
+    └── ...
 ```
 
-## 使用 Tushare 真实数据
-
-本项目推荐用 Tushare 两步式接入真实数据：先下载缓存，再本地回测。
-
-```bash
-# 1. 设置 token，Windows PowerShell 示例
-setx TUSHARE_TOKEN "你的token"
-
-# macOS / Linux 示例
-export TUSHARE_TOKEN="你的token"
-
-# 2. 下载并标准化 Tushare 数据
-python scripts/fetch_tushare_data.py --config configs/config_tushare.yaml
-
-# 3. 运行真实数据回测
-python -m mf_strategy.cli --config configs/config_tushare.yaml
-# 或者
-python scripts/run_tushare_backtest.py
-```
-
-结果会输出到：
+默认情况下，`data/` 和 `reports/` 不建议上传 GitHub。可将核心结论整理到：
 
 ```text
-reports/tushare_run/
+docs/baostock_result_analysis.md
 ```
 
-Tushare 详细使用说明见：[`docs/tushare_usage.md`](docs/tushare_usage.md)。
+---
 
-## 使用自备 CSV 数据
-
-将你的真实数据放到 `data/raw/`，至少需要以下 3 个文件：
-
-```text
-data/raw/prices.csv
-data/raw/fundamentals.csv
-data/raw/benchmark.csv
-```
-
-然后复制配置文件：
-
-```bash
-cp configs/config_csv.yaml.example configs/config_csv.yaml
-```
-
-修改其中的路径，再运行：
-
-```bash
-python -m mf_strategy.cli --config configs/config_csv.yaml
-```
-
-详细字段说明见：[`docs/data_schema.md`](docs/data_schema.md)。
-
-## 项目结构
+## 13. 项目结构
 
 ```text
 a_share_multifactor_backtest/
 ├── configs/
-│   ├── config_demo.yaml
+│   ├── config_baostock.yaml
+│   ├── config_level3_demo.yaml
 │   ├── config_tushare.yaml
-│   └── config_csv.yaml.example
-├── data/
-│   ├── raw/
-│   └── processed/
+│   └── ...
 ├── docs/
-│   ├── methodology.md
-│   ├── data_schema.md
-│   ├── tushare_usage.md
-│   └── resume_bullets.md
-├── notebooks/
-│   ├── 01_data_cleaning.ipynb
-│   ├── 02_factor_analysis.ipynb
-│   └── 03_backtest_result.ipynb
-├── reports/
+│   ├── baostock_usage.md
+│   ├── level3_research_upgrade.md
+│   ├── baostock_result_analysis.md
+│   └── ...
 ├── scripts/
-│   ├── run_demo.py
+│   ├── fetch_baostock_data.py
+│   ├── run_baostock_backtest.py
 │   ├── fetch_tushare_data.py
-│   └── run_tushare_backtest.py
+│   └── ...
 ├── src/
 │   └── mf_strategy/
-│       ├── config.py
 │       ├── data_loader.py
-│       ├── demo_data.py
-│       ├── tushare_loader.py
 │       ├── factor_engine.py
 │       ├── factor_preprocess.py
 │       ├── factor_test.py
+│       ├── ml_alpha.py
 │       ├── portfolio.py
 │       ├── backtest.py
 │       ├── performance.py
@@ -146,119 +492,55 @@ a_share_multifactor_backtest/
 ├── tests/
 ├── requirements.txt
 ├── pyproject.toml
-└── README.md
+├── README.md
+└── .gitignore
 ```
-
-## 推荐简历写法
-
-```text
-A 股多因子选股策略研究与回测系统 | Python, Pandas, NumPy, Matplotlib
-- 构建覆盖价值、质量、动量、低波动和流动性因子的 A 股多因子选股框架，完成因子计算、预处理、有效性检验、组合构建和回测评估全流程。
-- 对截面因子进行缺失值填充、MAD 去极值、Z-score 标准化及行业/市值中性化处理，并使用 IC、Rank IC、ICIR、分层回测和因子相关性分析评估因子有效性。
-- 对比等权合成与滚动 Rank IC 加权两种多因子模型，采用月度调仓、Top N 选股、行业中性约束和交易成本设定构建组合。
-- 输出年化收益、夏普比率、最大回撤、信息比率、换手率、超额收益、市场环境分阶段表现和行业/风格暴露分析，形成可复现实证报告。
-```
-
-## 注意事项
-
-1. demo 数据用于验证流程，不代表真实市场收益。
-2. 使用真实 A 股数据时，财务因子建议按公告日期对齐，避免未来函数。
-3. 回测默认使用收盘价和下一交易日执行，适合作为研究框架；实盘前应加入更精细的滑点、停牌、涨跌停和成交约束。
 
 ---
 
-## Level 3：量化研究员级升级
+## 14. GitHub 上传建议
 
-本项目现已支持研究员级增强模块，可在 Tushare 真实数据上运行：
-
-- `score_equal`：静态/等权多因子合成；
-- `score_ic_weighted`：滚动 Rank IC 加权合成；
-- `score_ml_alpha`：walk-forward 机器学习 Alpha 模型；
-- `score_ic_forecast`：因子 Rank IC 预测与动态因子择时。
-
-### 运行 Level 3 Tushare 版本
-
-```bash
-python scripts/fetch_tushare_data.py --config configs/config_tushare.yaml
-python scripts/run_level3_tushare_backtest.py
-```
-
-或直接：
-
-```bash
-python -m mf_strategy.cli --config configs/config_tushare.yaml
-```
-
-### Level 3 输出文件
+建议上传：
 
 ```text
-reports/tushare_run/
-├── report.md
-├── data/
-│   ├── performance_summary.csv
-│   ├── factor_panel_with_ml.csv
-│   ├── ml_diagnostics.csv
-│   ├── ml_feature_importance.csv
-│   ├── factor_timing_weights.csv
-│   ├── backtest_score_ml_alpha.csv
-│   └── backtest_score_ic_forecast.csv
-└── figures/
-    ├── nav_score_ml_alpha.png
-    ├── nav_score_ic_forecast.png
-    ├── ml_feature_importance.png
-    └── factor_timing_weights.png
+README.md
+configs/
+docs/
+scripts/
+src/
+tests/
+requirements.txt
+pyproject.toml
+.gitignore
 ```
 
-### 配置机器学习模块
+不建议上传：
 
-在 `configs/config_tushare.yaml` 中修改：
-
-```yaml
-ml:
-  enabled: true
-  model_type: random_forest      # random_forest | gradient_boosting | xgboost
-  n_estimators: 100
-  max_depth: 3
-  train_window_months: 36
-  min_train_months: 18
-  validation_months: 6
-  factor_ic_forecast: true
+```text
+data/
+reports/
+.venv/
+*.csv
+*.pkl
+*.parquet
 ```
 
-若希望使用 XGBoost：
+---
 
-```bash
-pip install -e ".[ml]"
+## 15. 简历写法
+
+```text
+A 股多因子选股与机器学习 Alpha 回测框架 | Python, BaoStock, Pandas, scikit-learn
+
+- 基于 BaoStock 免费 A 股数据构建多因子选股研究框架，覆盖数据下载、缓存、因子构造、因子预处理、IC 检验、组合构建、回测评估与报告生成。
+- 构建价值、动量、低波动和流动性因子，并使用 IC、Rank IC、ICIR、分层回测评估因子有效性。
+- 对比等权多因子、滚动 IC 加权、机器学习 Alpha 和因子 IC 预测择时策略，分析不同市场状态下的收益、回撤和超额表现。
+- 采用 walk-forward 训练框架避免未来函数，并输出样本外 Rank IC、特征重要性、策略净值、最大回撤、夏普比率和信息比率等指标。
 ```
 
-然后修改：
+---
 
-```yaml
-ml:
-  model_type: xgboost
-  ic_model_type: xgboost
-```
+## 16. 研究声明
 
-如未安装 XGBoost，程序会自动 fallback 到 sklearn 的 Gradient Boosting 模型。
-
-### 研究注意事项
-
-机器学习模块严格采用 walk-forward 训练方式：当前调仓日的预测只使用历史训练样本，避免未来函数。真实研究中不要只比较最终收益，更要关注样本外 Rank IC、最大回撤、换手率、交易成本、行业暴露和不同市场环境下的稳定性。
-
-更多说明见：`docs/level3_research_upgrade.md`。
-
-
-## Free BaoStock Data Source
-
-If your Tushare account does not have access to interfaces such as `index_weight`, `fina_indicator`, or `adj_factor`, use the BaoStock workflow. BaoStock is free and does not require a token, so it is suitable for running a real-data version of this project locally.
-
-```bash
-pip install -r requirements.txt
-pip install -e .
-python scripts/fetch_baostock_data.py --config configs/config_baostock.yaml
-python scripts/run_baostock_backtest.py
-```
-
-The BaoStock script writes standard project CSV files to `data/raw/baostock/`, and the report is generated under `reports/baostock_run/`. The free daily BaoStock dataset supports value, momentum, low-volatility and liquidity factors directly. Quality factors are kept as neutral placeholders unless you later add complete point-in-time financial data.
-
-See `docs/baostock_usage.md` for detailed instructions.
+本项目仅用于量化研究学习和策略框架展示，不构成任何投资建议。  
+回测结果受数据源、股票池、交易成本、调仓规则、样本区间和实现细节影响。历史表现不代表未来收益。
